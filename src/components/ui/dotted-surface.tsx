@@ -1,76 +1,74 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import React from "react";
+import { cn } from "@/lib/utils";
 
-export function DottedSurface() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+interface DottedSurfaceProps {
+  dotColor?: string;
+  dotRadius?: number;
+  spacing?: number;
+  radialFade?: boolean;
+  fadeRadius?: string;
+  className?: string;
+}
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let time = 0;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    const draw = () => {
-      // Dark background like the demo
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const spacing = 11;          // controls density
-      const dotSize = 1.3;         // small dots like in demo
-      const rows = Math.ceil(canvas.height / spacing) + 4;
-      const cols = Math.ceil(canvas.width / spacing) + 4;
-
-      for (let row = -2; row < rows; row++) {
-        for (let col = -2; col < cols; col++) {
-          const baseX = col * spacing;
-          const baseY = row * spacing;
-
-          // Multiple sine waves for smooth, organic ripple
-          const wave1 = Math.sin(time * 0.7 + baseX * 0.008 + baseY * 0.006) * 28;
-          const wave2 = Math.cos(time * 1.1 + baseX * 0.007 + baseY * 0.009) * 22;
-          const wave3 = Math.sin(time * 0.4 + (baseX + baseY) * 0.005) * 18;
-
-          const offsetY = wave1 + wave2 + wave3;
-
-          // Fade based on wave height → creates depth illusion
-          const alpha = Math.max(0.08, Math.min(0.75, (offsetY + 70) / 140));
-
-          ctx.fillStyle = `rgba(220, 240, 255, ${alpha})`; // light cyan-white dots
-          ctx.beginPath();
-          ctx.arc(baseX, baseY + offsetY, dotSize, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      time += 0.035; // calm animation speed
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
+export function DottedSurface({
+  dotColor = "rgba(200,220,255,0.5)",
+  dotRadius = 1,
+  spacing = 20,
+  radialFade = true,
+  fadeRadius = "60%",
+  className,
+}: DottedSurfaceProps) {
+  const id = React.useId().replace(/:/g, "");
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none fixed inset-0 -z-10"
-    />
+    <svg
+      aria-hidden="true"
+      className={cn("pointer-events-none", className)}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <pattern
+          id={`dots-${id}`}
+          x={0}
+          y={0}
+          width={spacing}
+          height={spacing}
+          patternUnits="userSpaceOnUse"
+        >
+          <circle
+            cx={spacing / 2}
+            cy={spacing / 2}
+            r={dotRadius}
+            fill={dotColor}
+          />
+        </pattern>
+
+        {radialFade && (
+          <radialGradient id={`grad-${id}`} cx="50%" cy="50%" r={fadeRadius} gradientUnits="objectBoundingBox">
+            <stop offset="0%"   stopColor="white" stopOpacity="1" />
+            <stop offset="70%"  stopColor="white" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
+        )}
+
+        {radialFade && (
+          <mask id={`mask-${id}`}>
+            <rect width="100%" height="100%" fill={`url(#grad-${id})`} />
+          </mask>
+        )}
+      </defs>
+
+      <rect
+        width="100%"
+        height="100%"
+        fill={`url(#dots-${id})`}
+        mask={radialFade ? `url(#mask-${id})` : undefined}
+      />
+    </svg>
   );
 }
+
+export default DottedSurface;
